@@ -45,6 +45,10 @@ class SimpleMailFormatter(AbstractFormatter):
                  body_field: str,
                  template: str = None,
                  **kwargs):
+        if subject_field.endswith('_'):
+            subject_field = '_' + subject_field[:-1]
+        if body_field.endswith('_'):
+            body_field = '_' + body_field[:-1]
         self.subject_field = subject_field
         self.body_field = body_field
         self.template = template or 'Subject: {subject}\n\n{body}'
