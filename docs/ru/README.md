@@ -27,8 +27,12 @@ pip install -e .
 ## Запуск
 
 ```shell
-critical /path/to/etc/handler_name.yml --kafka-server localhost --kafka-topic critical
+critical /path/to/etc/handler_name.yml --kafka-server localhost 
 ``` 
+или
+```shell
+critical handler_name.yml --kafka-server localhost --etc-path /path/to/etc/
+```
 
 ------
 

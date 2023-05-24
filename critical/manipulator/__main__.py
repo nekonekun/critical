@@ -22,31 +22,31 @@ def typer_main():
 
 
 def main(config: Annotated[pathlib.Path, typer.Argument()],
-         kafka_server: Annotated[str,
-                                 typer.Option('--kafka-server')],
-         kafka_topic: Annotated[str,
-                                typer.Option('--kafka-topic')],
-         verbose: Annotated[int,
-                            typer.Option('--verbose', '-v', count=True)] = 0):
+         kafka_server: Annotated[
+             str, typer.Option('--kafka-server',
+                               envvar='CRITICAL_KAFKA_SERVER',
+                               show_envvar=True)],
+         etc_path: Annotated[
+             str, typer.Option('--etc-path',
+                               envvar='CRITICAL_ETC_PATH',
+                               show_envvar=True)] = '',
+         verbose: Annotated[
+             int, typer.Option('--verbose', '-v',
+                               count=True,
+                               envvar='CRITICAL_VERBOSITY',
+                               show_envvar=True)] = 0):
     customize_logger(LOGGING_LEVELS[verbose])
     main_logger.error('Starting app...')
-    with open(config) as f:
+
+    full_path = pathlib.Path(etc_path) / config
+    with open(full_path) as f:
         handler_dict = yaml.safe_load(f)
 
     if 'name' not in handler_dict:
         handler_name = pathlib.Path(config).stem
         handler_dict['name'] = handler_name
 
-    main_logger.info(f'Topic: {kafka_topic}')
-
-    handler_name = handler_dict['name']
-    handler_name = ''.join(filter(str.isalnum, handler_name)).lower()
-    group_id = kafka_topic + '.' + handler_name
-    main_logger.info(f'Group ID: {group_id}')
-
-    consumer_dict = {'bootstrap_servers': kafka_server,
-                     'topic': kafka_topic,
-                     'group_id': group_id}
+    consumer_dict = {'bootstrap_servers': kafka_server}
 
     try:
         asyncio.run(_main(consumer_dict, handler_dict))
@@ -56,16 +56,21 @@ def main(config: Annotated[pathlib.Path, typer.Argument()],
 
 async def _main(consumer_dict: dict,
                 handler_dict: dict):
-    consumer = KafkaAsyncConsumer.from_dict(consumer_dict)
-    main_logger.error('Consumer initialized')
-    await consumer.start()
-
     try:
         handler = Handler.from_dict(handler_dict)
     except AttributeError as e:
         main_logger.critical(str(e))
         return
     main_logger.error('Handler initialized')
+
+    topic = handler.consumer_specification
+    handler_name = ''.join(filter(str.isalnum, handler.name)).lower()
+    group_id = topic + ':' + handler_name
+    consumer_dict['topic'] = topic
+    consumer_dict['group_id'] = group_id
+    consumer = KafkaAsyncConsumer.from_dict(consumer_dict)
+    main_logger.error('Consumer initialized')
+    await consumer.start()
 
     workers = []
     count = await consumer.consumer_target_count()

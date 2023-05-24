@@ -21,14 +21,15 @@ class Handler:
             dynamic_filter_list: List[AbstractDynamicFilter],
             formatter: AbstractFormatter,
             sender_list: List[AbstractAsyncSender],
+            consumer_specification: str,
             name: str = 'Unnamed Handler'):
         logger.debug('Handler initializing')
         self.static_filters = static_filter_list
         self.dynamic_filters = dynamic_filter_list
         self.formatter = formatter
         self.senders = sender_list
+        self.consumer_specification = consumer_specification
         self.name = name
-        self.middlewares = []
         logger.info(f'{self.name} handler has been set')
 
     async def start(self) -> None:
@@ -108,4 +109,6 @@ class Handler:
 
         name = config.get('name')
         logger.debug(f'Handler name: {name}')
-        return cls(static_filters_, dynamic_filters_, formatter, senders_, name)
+        consumer_specification = config.get('consumer_specification')
+        return cls(static_filters_, dynamic_filters_, formatter, senders_,
+                   consumer_specification, name)

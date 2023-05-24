@@ -27,8 +27,12 @@ pip install -e .
 ## Run
 
 ```shell
-critical /path/to/etc/handler_name.yml --kafka-server localhost --kafka-topic critical
+critical /path/to/etc/handler_name.yml --kafka-server localhost 
 ``` 
+or
+```shell
+critical handler_name.yml --kafka-server localhost --etc-path /path/to/etc/
+```
 
 ------
 
@@ -66,7 +70,7 @@ critical-bot --bot-token 1234567890:AAAAAbbbbbCddEEff0GhhIIII0J-K0llllM --redis-
  - `host`: str 
  - `short_message`: str
  - `level`: int
- - `full_message`: str: time plus `short_message`
+ - `full_message`: str: time plis `short_message`
  - `_level`: int: same as `level`
  - `_gl2_remote_ip`: str
  - `_gl2_remote_port`: int

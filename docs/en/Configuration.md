@@ -7,13 +7,19 @@ Less theory, more practice? Just jump to [example](#example) section.
 ## Basics
 
  - File sections can be arranged in any order.
- - Senders and Formatter sections are mandatory
+ - Consumer Specification, Senders and Formatter sections are mandatory
  - Static filters, Dynamic filters and Name sections are optional
 
 
 ## Sections
 
-### 1. Senders
+### 1. Consumer specification
+ - Key: `consumer_specification`
+ - Value of `consumer_specification` field will be passed to consumer. For KafkaConsumer it should be Kafka topic name.
+### 2. Name
+ - Key: `name`
+ - Handler name. This name will be used to make Kafka `group ID`
+### 3. Senders
  - Key: `senders`
  - Multiple senders are allowed, so senders' section is a list
  - Each sender configuration must have `class` field
@@ -33,7 +39,7 @@ Less theory, more practice? Just jump to [example](#example) section.
  - `sender`: Sender
  - `subject`: Default subject. Will be used if no "Subject: " header is present in message
  - `receivers`: list of e-mails addresses
-### 2. Formatter
+### 4. Formatter
  - Key: `formatter`
  - Each handler can have only one Formatter
  - Formatter configuration must have `class` field
@@ -46,7 +52,7 @@ Less theory, more practice? Just jump to [example](#example) section.
  - `subject_field`: one of GELF fields to be copied into e-mail "Subject: " field
  - `body_field`: one of GELF fields to be copied into e-mail body
  - `format`: message template, optional, defaults to `Subject: {subject}\n\n{body}`
-### 3. Static Filters
+### 5. Static Filters
  - Key: `static_filters`
  - Multiple static filters are allowed, so static filters' section is a list
  - Static filters are applied together (i.e. as they have AND between them)
@@ -72,7 +78,7 @@ Less theory, more practice? Just jump to [example](#example) section.
  - `patterns`: list of substrings
  - `exclude`: boolean value, False by default. Set True to exclude messages that contain any of specified patterns
 
-### 4. Dynamic filters
+### 6. Dynamic filters
  - Key: `dynamic_filters`
  - Multiple dynamic filters are allowed, so dynamic filters' section is a list
  - Dynamic filters are exclud'ish by default
@@ -87,11 +93,9 @@ Less theory, more practice? Just jump to [example](#example) section.
  - `port`: Redis port (optional)
  - `db`: Redis database number (optional). Defaults to 0
  - Redis structure looks like ```key: set_of_patterns```, with key described in previous section
-### 5. Name
- - Key: `name`
- - Basically, the name of the handler
 # Example
  In this example handler will:
+ - Pass topic name `critical-topic` to consumer
  - Catch messages from all devices within 10.0.0.0/8 subnet, except annoying 10.0.0.188 and 10.120.16.240
  - Discard messages if any unimportant pattern such as `IGMPSNOOPING-6-NO_IGMP_QUERIER`, `SPANTREE-6-INTERFACE` etc. would be found  
  - Take `short_message` field from the GELF-message
@@ -99,6 +103,7 @@ Less theory, more practice? Just jump to [example](#example) section.
  - If no patterns from redis will be found, messages will be sent to @nekone and to our Alerting chat
 ```yaml
 name: EVERYTHING
+consumer_specification: critical-topic 
 
 senders:
   - class: TelegramSender
