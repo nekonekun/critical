@@ -90,15 +90,18 @@ async def worker(parent_consumer: AbstractAsyncConsumer,
         consumer = parent_consumer
     else:
         consumer = await parent_consumer.fork()
-    try:
-        while True:
+    while True:
+        try:
             msg = await consumer.consume()
             main_logger.info(f'Consumer #{number} get new message')
-            main_logger.debug(msg.full_message)
+            main_logger.debug(msg.short_message)
             await handler.handle(msg)
-    except asyncio.CancelledError:
-        main_logger.error(f'Worker #{number} cancelled, stop')
-    finally:
-        main_logger.error(f'Stopping consumer #{number}')
-        await consumer.stop()
-        main_logger.error(f'Consumer #{number} stopped')
+        except asyncio.CancelledError:
+            main_logger.error(f'Stopping consumer #{number}')
+            await consumer.stop()
+            main_logger.error(f'Consumer #{number} stopped')
+            break
+        except Exception as e:
+            error_text = e.__class__.__name__ + ': ' + str(e)
+            main_logger.error(error_text)
+
