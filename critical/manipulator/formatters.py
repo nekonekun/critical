@@ -40,6 +40,33 @@ class CopyFieldFormatter(AbstractFormatter):
         return CopyFieldFormatter(field)
 
 
+class SimpleMailFormatter(AbstractFormatter):
+    def __init__(self, subject_field: str,
+                 body_field: str,
+                 template: str = None,
+                 **kwargs):
+        self.subject_field = subject_field
+        self.body_field = body_field
+        self.template = template or 'Subject: {subject}\n\n{body}'
+
+    def format(self, obj: GELFMessage) -> str:
+        subject = str(obj.dict(by_alias=True).get(self.subject_field))
+        body = str(obj.dict(by_alias=True).get(self.body_field))
+        body += '\n\n'
+        body += obj.timestamp_.isoformat()
+        text = self.template.format(subject=subject, body=body)
+        return text
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        subject_field = settings.get('subject_field')
+        body_field = settings.get('body_field')
+        template = settings.get('template')
+        return SimpleMailFormatter(subject_field=subject_field,
+                                   body_field=body_field,
+                                   template=template)
+
+
 class DummyFormatter(AbstractFormatter):  # pragma: no cover
     def __init__(self, **kwargs):
         pass
