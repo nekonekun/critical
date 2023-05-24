@@ -1,11 +1,12 @@
+import asyncio
 import datetime
-
 import pytest
-from aiogram.methods import Request, SendMessage
-from aiogram.types import Chat, ForceReply, Message
+from aiogram.methods import SendMessage
+from aiogram.types import Chat, Message
 
 from critical.manipulator.dynamic_filters import AbstractDynamicFilter
 from critical.manipulator.senders import TelegramSender
+from critical.manipulator.senders import MailSender
 
 
 class DummyFilter(AbstractDynamicFilter):
@@ -22,7 +23,7 @@ class DummyFilter(AbstractDynamicFilter):
 
 
 @pytest.mark.asyncio
-async def test_senders(telegram_bot, telegram_chat_ids, telegram_creds):
+async def test_telegram_sender(telegram_bot, telegram_chat_ids, telegram_creds):
     sender = TelegramSender(telegram_bot, telegram_chat_ids)
     # set up dummy filter that filters out all messages
     for chat_id in telegram_chat_ids:
@@ -93,3 +94,18 @@ async def test_senders(telegram_bot, telegram_chat_ids, telegram_creds):
 
     sender = TelegramSender.from_dict(telegram_creds)
     await sender.stop()
+
+
+@pytest.mark.asyncio
+async def test_mail_sender(smtp_creds, mail_creds):
+    smtp_instance = MailSender.smtp_from_dict(smtp_creds)
+    sender = MailSender(smtp=smtp_instance, **mail_creds)
+    await sender.start()
+    await sender.send_one('Test message', mail_creds['receivers'][0])
+    await sender.stop()
+
+    sender = MailSender.from_dict(smtp_creds | mail_creds)
+    await sender.start()
+    await sender.send_one('Test message', mail_creds['receivers'][0])
+    await sender.stop()
+    await asyncio.sleep(0.5)
