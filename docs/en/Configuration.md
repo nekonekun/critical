@@ -17,22 +17,35 @@ Less theory, more practice? Just jump to [example](#example) section.
  - Key: `senders`
  - Multiple senders are allowed, so senders' section is a list
  - Each sender configuration must have `class` field
- - Only one sender is implemented by now
+ - Two sender are implemented by now
  - #### TelegramSender
  - Two parameters: `token` and `receivers`
  - `token`: Telegram Bot API token
  - `receivers`: list of chat_ids
  - If bot could not send a message to receiver ('coz of privacy settings or something like that) -- message will be ignored, but bot will try to send message next time. 
-
+ - #### MailSender
+ - Eight parameters: `hostname`, `port`, `username`, `password`, `use_tls`, `sender`, `subject` and `receivers`
+ - `hostname`: SMTP server hostname
+ - `port`: SMTP server port
+ - `username`: SMTP username
+ - `password`: SMTP password
+ - `use_tls`: optional, True by default. Set False to disable TLS 
+ - `sender`: Sender
+ - `subject`: Default subject. Will be used if no "Subject: " header is present in message
+ - `receivers`: list of e-mails addresses
 ### 2. Formatter
  - Key: `formatter`
  - Each handler can have only one Formatter
  - Formatter configuration must have `class` field
- - Only one formatter is implemented by now
+ - Two formatters are implemented by now
  - #### CopyFieldFormatter
  - One parameter: `field`
  - `field`: one of Graylog Extended Log Format fields
-
+ - #### SimpleMailFormatter
+ - Three parameters: `subject_field`, `body_field` and `format`
+ - `subject_field`: one of GELF fields to be copied into e-mail "Subject: " field
+ - `body_field`: one of GELF fields to be copied into e-mail body
+ - `format`: message template, optional, defaults to `Subject: {subject}\n\n{body}`
 ### 3. Static Filters
  - Key: `static_filters`
  - Multiple static filters are allowed, so static filters' section is a list
