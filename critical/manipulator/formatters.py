@@ -12,6 +12,11 @@ class AbstractFormatter(ABC):
     def format(self, obj: GELFMessage) -> str:  # pragma: no cover
         return str(obj)
 
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, settings: dict):  # pragma: no cover
+        raise NotImplementedError
+
 
 class CopyFieldFormatter(AbstractFormatter):
     def __init__(self, field: str):
@@ -28,3 +33,17 @@ class CopyFieldFormatter(AbstractFormatter):
         result = str(obj.dict(by_alias=True).get(self.field))
         logger.debug(f'Outgoing message: {result}')
         return result
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        field = settings.get('field')
+        return CopyFieldFormatter(field)
+
+
+class DummyFormatter(AbstractFormatter):  # pragma: no cover
+    def __init__(self, **kwargs):
+        pass
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        return DummyFormatter()

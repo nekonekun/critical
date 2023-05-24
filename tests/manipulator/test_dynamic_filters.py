@@ -5,8 +5,7 @@ from critical.manipulator.dynamic_filters import RedisExcludeRegexp
 
 @pytest.mark.asyncio
 async def test_redis_exclude_regexp(composer, redis_creds):
-    current_filter = RedisExcludeRegexp(**redis_creds)
-    assert current_filter.redis is None
+    current_filter = RedisExcludeRegexp.from_dict(redis_creds)
     await current_filter.start()
     assert current_filter.redis is not None
 
@@ -27,4 +26,3 @@ async def test_redis_exclude_regexp(composer, redis_creds):
     await current_filter.redis.srem('test_key', 'test_value')
 
     await current_filter.stop()
-    assert current_filter.redis is None

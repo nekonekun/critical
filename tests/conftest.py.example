@@ -1,8 +1,20 @@
+import json
+import aiokafka
 import faker
 import datetime
 import pytest
+import tests.mocked_bot
 
 from critical.manipulator.models import GELFMessage
+
+
+k_creds = {'bootstrap_servers': 'localhost',
+           'topic': 'test-critical',
+           'group_id': 'test-critical.test'}
+r_creds = {'host': 'localhost',
+           'db': 0}
+t_creds = {'token': '1234567890:AAAAAbbbbbCddEEff0GhhIIII0J-K0llllM',
+           'receivers': [10, 20, -100, -50]}
 
 
 @pytest.fixture
@@ -12,34 +24,50 @@ def composer():
 
 @pytest.fixture
 def kafka_creds():
-    return {'bootstrap_servers': '127.0.0.1',
-            'topic': 'test-critical',
-            'group_id': 'test-critical.test'}
+    return k_creds
+
+
+@pytest.fixture
+async def kafka_producer(kafka_creds):
+    return aiokafka.AIOKafkaProducer(
+        bootstrap_servers=kafka_creds['bootstrap_servers'])
+
+
+@pytest.fixture
+async def kafka_consumer(kafka_creds):
+    creds = kafka_creds.copy()
+    topic = creds.pop('topic')
+    return aiokafka.AIOKafkaConsumer(topic, **creds)
 
 
 @pytest.fixture
 def redis_creds():
-    return {'host': '127.0.0.1',
-            'db': 0}
+    return r_creds
 
 
 @pytest.fixture
-def telegram_token():
-    return '1234567890:AAAAAbbbbbCddEEff0HiiJJJJ1K-L2mmmmN'
+def telegram_creds():
+    return t_creds
 
 
 @pytest.fixture
-def telegram_chat_id():
-    return '123456789'
+def telegram_bot():
+    return tests.mocked_bot.MockedBot()
+
+
+@pytest.fixture
+def telegram_chat_ids(telegram_creds):
+    return telegram_creds['receivers']
+
 
 class MessageComposer:
     def __init__(self):
         self.fake = faker.Faker()
         faker.Faker.seed(0)
 
-    def message(self, hostname: str = None,
-                short: str = None,
-                ip_address: str = None):
+    def message_dict(self, hostname: str = None,
+                     short: str = None,
+                     ip_address: str = None):
         fake_hostname = hostname or self.fake.hostname()
         fake_sentence = short or self.fake.sentence()
         fake_short = fake_sentence
@@ -69,4 +97,16 @@ class MessageComposer:
                     "_id": self.fake.uuid4(),
                     "_facility": "local7",
                     "_timestamp": fake_datetime.isoformat()}
+        return msg_dict
+
+    def message(self, hostname: str = None,
+                short: str = None,
+                ip_address: str = None):
+        msg_dict = self.message_dict(hostname, short, ip_address)
+        return json.dumps(msg_dict)
+
+    def gelf(self, hostname: str = None,
+             short: str = None,
+             ip_address: str = None):
+        msg_dict = self.message_dict(hostname, short, ip_address)
         return GELFMessage(**msg_dict)

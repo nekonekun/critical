@@ -29,6 +29,8 @@ class AbstractAsyncSender(ABC):
         :param dynamic_filters:
         :return:
         """
+        if not dynamic_filters:
+            dynamic_filters = []
         send_tasks = []
         for receiver in self.receivers:
             filtered = False
@@ -51,32 +53,30 @@ class AbstractAsyncSender(ABC):
     async def stop(self) -> None:  # pragma: no cover
         pass
 
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, settings: dict):  # pragma: no cover
+        raise NotImplementedError
+
 
 class TelegramSender(AbstractAsyncSender):
     prefix: str = 'tg_'
 
-    def __init__(self, token: str, receivers: List[Union[int, str]]):
+    def __init__(self, bot: Bot, receivers: List[Union[int, str]]):
         """
 
         :param token:
         :param receivers:
         """
         logger.debug('Telegram sender initializing...')
-        self._token = token
-        bot_id, token_part = self._token.split(':')
-        hidden_token_part = '#' * len(token_part)
-        hidden_token = bot_id + ':' + hidden_token_part
-        logger.debug(f'Token: {hidden_token}')
+        # self._token = token
+        # bot_id, token_part = self._token.split(':')
+        # hidden_token_part = '#' * len(token_part)
+        # hidden_token = bot_id + ':' + hidden_token_part
+        # logger.debug(f'Token: {hidden_token}')
+        self.bot = bot
         super().__init__(receivers)
         logger.info('Telegram sender has been set')
-        self.bot = None
-
-    async def start(self) -> None:
-        """
-        Instantiate bot
-        :return: None
-        """
-        self.bot = Bot(self._token)
 
     async def stop(self) -> None:
         """
@@ -84,7 +84,6 @@ class TelegramSender(AbstractAsyncSender):
         :return: None
         """
         await self.bot.session.close()
-        self.bot = None
 
     async def send_one(self, message: str, receiver: Union[str, int]) -> None:
         """
@@ -104,3 +103,24 @@ class TelegramSender(AbstractAsyncSender):
             except AiogramError as e:
                 logger.error(str(e))
                 return
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        token = settings.get('token')
+        receivers = settings.get('receivers')
+        bot = Bot(token=token)
+        return cls(bot, receivers)
+
+
+class DummySender(AbstractAsyncSender):  # pragma: no cover
+    prefix: str = 'dummy_'
+
+    def __init__(self, receivers, **kwargs):
+        super().__init__(receivers, **kwargs)
+
+    async def send_one(self, message: str, receiver: Any):
+        pass
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        return DummySender([])

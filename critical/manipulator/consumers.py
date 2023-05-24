@@ -23,56 +23,45 @@ class AbstractAsyncConsumer(ABC):
         return self
 
     @abstractmethod
-    async def consume(self) -> GELFMessage:
+    async def consume(self) -> GELFMessage:  # pragma: no cover
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, settings: dict):  # pragma: no cover
         raise NotImplementedError
 
 
 class KafkaAsyncConsumer(AbstractAsyncConsumer):
-    def __init__(self, bootstrap_servers: str, topic: str, group_id: str):
-        """
-        :param bootstrap_servers: bootstrap servers separated by comma
-        :param topic: kafka topic
-        :param group_id: consumer group ID
-        """
-        self.bootstrap_servers = bootstrap_servers
+    def __init__(self, consumer: aiokafka.AIOKafkaConsumer, topic: str):
+        self.consumer = consumer
         self.topic = topic
-        self.group_id = group_id
-        self.consumer: Optional[aiokafka.AIOKafkaConsumer] = None
 
     async def start(self) -> None:
         """Set up consumer"""
-        self.consumer = aiokafka.AIOKafkaConsumer(
-            self.topic,
-            bootstrap_servers=self.bootstrap_servers,
-            group_id=self.group_id,
-            enable_auto_commit=True)
         await self.consumer.start()
 
     async def stop(self) -> None:
         """Dispose consumer and delete all connections"""
         await self.consumer.stop()
-        self.consumer = None
 
     async def consumer_target_count(self) -> int:
         """Get target count of concurrent consumers"""
         logger.debug('Getting target count of concurrent consumers...')
-        disabled = self.consumer is None
-        if disabled:
-            logger.debug('Consumers is not running, start')
-            await self.start()
         partitions = self.consumer.partitions_for_topic(self.topic)
         logger.debug('Got list of partitions')
         result = len(partitions)
-        if disabled:
-            logger.debug('Consumers was not running, stop')
-            await self.stop()
         return result
 
     async def fork(self) -> AnyKafkaConsumer:
         """Create copy of consumer and set it up"""
-        child_consumer = self.__class__(self.bootstrap_servers,
-                                        self.topic,
-                                        self.group_id)
+        new_consumer = aiokafka.AIOKafkaConsumer(
+            self.topic,
+            bootstrap_servers=self.consumer._client._bootstrap_servers,
+            group_id=self.consumer._group_id,
+            enable_auto_commit=True
+        )
+        child_consumer = KafkaAsyncConsumer(new_consumer, self.topic)
         await child_consumer.start()
         return child_consumer
 
@@ -83,3 +72,26 @@ class KafkaAsyncConsumer(AbstractAsyncConsumer):
         json_value = json.loads(value)
         message = GELFMessage(**json_value)
         return message
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        bootstrap_servers = settings.pop('bootstrap_servers', 'localhost')
+
+        try:
+            topic = settings.pop('topic')
+        except KeyError:
+            raise ValueError('Kafka topic is not provided')
+        try:
+            group_id = settings.pop('group_id')
+        except KeyError:
+            raise ValueError('Kafka group ID is not provided')
+
+        if settings:
+            raise ValueError('Unexpected key(s): ' + ', '.join(settings.keys()))
+
+        consumer = aiokafka.AIOKafkaConsumer(
+                    topic,
+                    bootstrap_servers=bootstrap_servers,
+                    group_id=group_id,
+                    enable_auto_commit=True)
+        return cls(consumer, topic)

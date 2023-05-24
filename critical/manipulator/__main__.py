@@ -31,40 +31,45 @@ def main(config: Annotated[pathlib.Path, typer.Argument()],
     customize_logger(LOGGING_LEVELS[verbose])
     main_logger.error('Starting app...')
     with open(config) as f:
-        cfg_dict = yaml.safe_load(f)
+        handler_dict = yaml.safe_load(f)
 
-    if 'name' not in cfg_dict:
+    if 'name' not in handler_dict:
         handler_name = pathlib.Path(config).stem
-        cfg_dict['name'] = handler_name
+        handler_dict['name'] = handler_name
+
+    main_logger.info(f'Topic: {kafka_topic}')
+
+    handler_name = handler_dict['name']
+    handler_name = ''.join(filter(str.isalnum, handler_name)).lower()
+    group_id = kafka_topic + '.' + handler_name
+    main_logger.info(f'Group ID: {group_id}')
+
+    consumer_dict = {'bootstrap_servers': kafka_server,
+                     'topic': kafka_topic,
+                     'group_id': group_id}
+
     try:
-        handler = Handler.from_dict(cfg_dict)
+        asyncio.run(_main(consumer_dict, handler_dict))
+    except KeyboardInterrupt:
+        main_logger.error('Keyboard Interrupt, stop')
+
+
+async def _main(consumer_dict: dict,
+                handler_dict: dict):
+    consumer = KafkaAsyncConsumer.from_dict(consumer_dict)
+    main_logger.error('Consumer initialized')
+    await consumer.start()
+
+    try:
+        handler = Handler.from_dict(handler_dict)
     except AttributeError as e:
         main_logger.critical(str(e))
         return
     main_logger.error('Handler initialized')
 
-    main_logger.info(f'Topic: {kafka_topic}')
-
-    handler_name = handler.name
-    handler_name = ''.join(filter(str.isalnum, handler_name)).lower()
-    group_id = kafka_topic + '.' + handler_name
-    main_logger.info(f'Group ID: {group_id}')
-
-    consumer = KafkaAsyncConsumer(topic=kafka_topic,
-                                  bootstrap_servers=kafka_server,
-                                  group_id=group_id)
-    main_logger.error('Consumer initialized')
-
-    try:
-        asyncio.run(_main(consumer, handler))
-    except KeyboardInterrupt:
-        main_logger.error('Keyboard Interrupt, stop')
-
-
-async def _main(consumer: AbstractAsyncConsumer,
-                handler: Handler):
     workers = []
-    for i in range(await consumer.consumer_target_count()):
+    count = await consumer.consumer_target_count()
+    for i in range(count):
         worker_task = asyncio.create_task(worker(consumer, i, handler))
         workers.append(worker_task)
     try:
@@ -81,9 +86,8 @@ async def worker(parent_consumer: AbstractAsyncConsumer,
                  number: int,
                  handler: Handler):
     main_logger.error(f'Start consumer #{number}')
-    if number == 0:
+    if number == 1:
         consumer = parent_consumer
-        await consumer.start()
     else:
         consumer = await parent_consumer.fork()
     try:
@@ -93,7 +97,8 @@ async def worker(parent_consumer: AbstractAsyncConsumer,
             main_logger.debug(msg.full_message)
             await handler.handle(msg)
     except asyncio.CancelledError:
-        main_logger.error(f'Consumer #{number} cancelled, stop')
+        main_logger.error(f'Worker #{number} cancelled, stop')
     finally:
+        main_logger.error(f'Stopping consumer #{number}')
         await consumer.stop()
         main_logger.error(f'Consumer #{number} stopped')

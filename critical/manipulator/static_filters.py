@@ -15,8 +15,20 @@ class AbstractStaticFilter(ABC):
     def filter(self, obj: GELFMessage) -> bool:
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, settings: dict):  # pragma: no cover
+        raise NotImplementedError
+
 
 class SourceIPFilter(AbstractStaticFilter):
+    @classmethod
+    def from_dict(cls, settings: dict):
+        prefixes = settings.get('prefixes', [])
+        ips = settings.get('ips', [])
+        exclude = settings.get('exclude', False)
+        return SourceIPFilter(prefixes, ips, exclude)
+
     def __init__(self, prefixes: Optional[List[Union[IPv4Network, str]]] = None,
                  ips: Optional[List[Union[IPv4Address, str]]] = None,
                  exclude: bool = False):
@@ -61,6 +73,12 @@ class SourceIPFilter(AbstractStaticFilter):
 
 
 class MessageBodyFilter(AbstractStaticFilter):
+    @classmethod
+    def from_dict(cls, settings: dict):
+        pattern = settings.pop('pattern')
+        exclude = settings.get('exclude', False)
+        return MessageBodyFilter(pattern, exclude)
+
     def __init__(self, pattern: str, exclude: bool = False):
         logger.debug('MessageBody filter initializing...')
         self.pattern = pattern
@@ -85,6 +103,12 @@ class MessageBodyFilter(AbstractStaticFilter):
 
 
 class MessageBodyAnyFilter(AbstractStaticFilter):
+    @classmethod
+    def from_dict(cls, settings: dict):
+        patterns = settings.pop('patterns')
+        exclude = settings.get('exclude', False)
+        return MessageBodyAnyFilter(patterns, exclude)
+
     def __init__(self, patterns: List[str], exclude: bool = False):
         self.patterns = patterns
         self.exclude = exclude
@@ -106,3 +130,16 @@ class MessageBodyAnyFilter(AbstractStaticFilter):
         else:
             logger.debug('Message filtered')
         return result
+
+
+class DummyStaticFilter(AbstractStaticFilter):  # pragma: no cover
+    @classmethod
+    def from_dict(cls, settings: dict):
+        valid = settings.get('valid', True)
+        return DummyStaticFilter(valid)
+
+    def __init__(self, valid: bool = True, **kwargs):
+        self.valid = valid
+
+    def filter(self, obj: GELFMessage) -> bool:
+        return self.valid

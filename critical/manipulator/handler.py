@@ -1,4 +1,4 @@
-from typing import List, Union, Type, TypeVar
+from typing import List, Type, TypeVar
 
 from critical.manipulator import formatters, static_filters, \
     dynamic_filters, senders
@@ -17,30 +17,16 @@ AnyHandler = TypeVar('AnyHandler', bound='Handler')
 class Handler:
     def __init__(
             self,
-            static_filter_list: Union[List[AbstractStaticFilter],
-                                      AbstractStaticFilter],
-            dynamic_filter_list: Union[List[AbstractDynamicFilter],
-                                       AbstractDynamicFilter],
+            static_filter_list: List[AbstractStaticFilter],
+            dynamic_filter_list: List[AbstractDynamicFilter],
             formatter: AbstractFormatter,
-            sender_list: Union[List[AbstractAsyncSender], AbstractAsyncSender],
+            sender_list: List[AbstractAsyncSender],
             name: str = 'Unnamed Handler'):
         logger.debug('Handler initializing')
-        if isinstance(static_filter_list, list):
-            self.static_filters = static_filter_list
-        else:
-            self.static_filters = [static_filter_list]
-        logger.error(f'STATIC FILTERS COUNT: {len(self.static_filters)}')
-        if isinstance(dynamic_filter_list, list):
-            self.dynamic_filters = dynamic_filter_list
-        else:
-            self.dynamic_filters = [dynamic_filter_list]
-        logger.error(f'DYNAMIC FILTERS COUNT: {len(self.dynamic_filters)}')
+        self.static_filters = static_filter_list
+        self.dynamic_filters = dynamic_filter_list
         self.formatter = formatter
-
-        if isinstance(sender_list, list):
-            self.senders = sender_list
-        else:
-            self.senders = [sender_list]
+        self.senders = sender_list
         self.name = name
         self.middlewares = []
         logger.info(f'{self.name} handler has been set')
@@ -76,7 +62,7 @@ class Handler:
             logger.critical(f'Formatter class {formatter_cls_name} '
                             f'does not exist')
             raise
-        formatter = formatter_cls(**formatter_settings)
+        formatter = formatter_cls.from_dict(formatter_settings)
 
         senders_ = []
         all_senders_settings = config.pop('senders')
@@ -89,7 +75,7 @@ class Handler:
                 logger.critical(f'Sender class {sender_cls_name} '
                                 f'does not exist')
                 raise
-            sender = sender_cls(**sender_settings)
+            sender = sender_cls.from_dict(sender_settings)
             senders_.append(sender)
 
         static_filters_ = []
@@ -103,7 +89,7 @@ class Handler:
                 logger.critical(f'Filter class {filter_cls_name} '
                                 f'does not exist')
                 raise
-            filter_ = filter_cls(**static_filter_settings)
+            filter_ = filter_cls.from_dict(static_filter_settings)
             static_filters_.append(filter_)
 
         dynamic_filters_ = []
@@ -117,7 +103,7 @@ class Handler:
                 logger.critical(f'Filter class {filter_cls_name} '
                                 f'does not exist')
                 raise
-            filter_ = filter_cls(**dynamic_filter_settings)
+            filter_ = filter_cls.from_dict(dynamic_filter_settings)
             dynamic_filters_.append(filter_)
 
         name = config.get('name')

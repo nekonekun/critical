@@ -20,29 +20,27 @@ class AbstractDynamicFilter(ABC):
     async def stop(self):  # pragma: no cover
         pass
 
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, settings: dict):  # pragma: no cover
+        raise NotImplementedError
+
 
 class RedisDynamicFilter(AbstractDynamicFilter, ABC):
-    def __init__(self, host: str, port: int = 6379, db: int = 0):
-        """
-        Initialize Redis instance
-        :param host: redis host
-        :param port: redis port (default: 6379)
-        :param db: redis database number (default: 0)
-        """
-        self.host = host
-        self.port = port
-        self.db = db
-        self.redis: Optional[redis.Redis] = None
-
-    async def start(self):
-        self.redis = redis.Redis(host=self.host,
-                                 port=self.port,
-                                 db=self.db,
-                                 decode_responses=True)
+    def __init__(self, redis_instance: redis.Redis):
+        self.redis = redis_instance
 
     async def stop(self):
         await self.redis.close()
-        self.redis = None
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        host = settings.get('host', 'localhost')
+        port = settings.get('port', 6379)
+        db = settings.get('db', 0)
+        redis_instance = redis.Redis(host=host, port=port, db=db,
+                                     decode_responses=True)
+        return cls(redis_instance)
 
 
 class RedisExcludePattern(RedisDynamicFilter):
@@ -67,3 +65,16 @@ class RedisExcludeRegexp(RedisDynamicFilter):
             if hit:
                 break
         return hit
+
+
+class DummyDynamicFilter(AbstractDynamicFilter):  # pragma: no cover
+    def __init__(self, drop: bool = True, **kwargs):
+        self.drop = drop
+
+    async def filter(self, message: str, key: str) -> bool:
+        return self.drop
+
+    @classmethod
+    def from_dict(cls, settings: dict):
+        drop = settings.get('drop', True)
+        return DummyDynamicFilter(drop)
