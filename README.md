@@ -36,6 +36,26 @@ critical handler_name.yml --kafka-server localhost --etc-path /path/to/etc/
 
 ------
 
+## Run as systemd service
+
+Adjust `critical@.service` template file (at least `ExecStart` and `CRITICAL_ETC_PATH`)
+
+Then:
+```shell
+sudo cp critical@.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start critical@filename.yaml
+``` 
+
+You can run multiple instances of this service just replacing `filename.yaml` with actual configuration filename
+
+```shell
+sudo systemctl start critical@first.yaml
+sudo systemctl start critical@second.yaml
+sudo systemctl start critical@another.yaml
+```
+------
+
 ## Configure
 
 Handlers can be configured only via configuration files.

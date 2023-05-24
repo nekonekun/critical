@@ -36,6 +36,24 @@ critical handler_name.yml --kafka-server localhost --etc-path /path/to/etc/
 
 ------
 
+## Запуск как systemd сервиса
+
+Отредактируй файл шаблона `critical@.service` (по крайней мере `ExecStart` и `CRITICAL_ETC_PATH`)
+
+Затем:
+```shell
+sudo cp critical@.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start critical@filename.yaml
+``` 
+
+Ты можешь запустить несколько копий этого сервиса просто меняя `filename.yaml` на настоящее имя файла конфига
+```shell
+sudo systemctl start critical@first.yaml
+sudo systemctl start critical@second.yaml
+sudo systemctl start critical@another.yaml
+```
+------
 ## Настройка
 
 Обработчики настраиваются только с помощью конфигурационных файлов

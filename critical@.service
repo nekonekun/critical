@@ -1,0 +1,13 @@
+[Unit]
+Description=Critical events daemon (using %I)
+After=network.target
+
+[Service]
+Environment="CRITICAL_KAFKA_SERVER=localhost"
+Environment="CRITICAL_ETC_PATH=/opt/critical/etc/"
+Environment="CRITICAL_VERBOSITY=2"
+ExecStart=/opt/critical/venv/bin/critical %I
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -7,8 +7,8 @@
 ## Основы
 
  - Разделы настройки могут располагаться в любом порядке
- - Senders и Formatter разделы обязательны
- - Разделы Static filters, Dynamic filters и Name sections опциональны
+ - Разделы Consumer Specification, Senders и Formatter обязательны
+ - Разделы Static filters, Dynamic filters и Name опциональны
 
 
 ## Разделы
