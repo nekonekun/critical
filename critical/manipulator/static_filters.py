@@ -90,7 +90,7 @@ class MessageBodyFilter(AbstractStaticFilter):
     def filter(self, obj: GELFMessage) -> bool:
         logger.debug('Start message body filter process')
         logger.debug(f'Pattern: {self.pattern}')
-        present_in_message = self.pattern in obj.full_message_
+        present_in_message = self.pattern in obj.short_message
         if present_in_message:
             logger.debug(f'Pattern {self.pattern} found')
         logger.debug(f'Exclude: {self.exclude}')
@@ -118,7 +118,7 @@ class MessageBodyAnyFilter(AbstractStaticFilter):
         present_in_message = False
         for pattern in self.patterns:
             logger.debug(f'Pattern: {pattern}')
-            present_in_message = pattern in obj.full_message_
+            present_in_message = pattern in obj.short_message
             if present_in_message:
                 logger.debug(f'Pattern {pattern} found')
                 present_in_message = True
