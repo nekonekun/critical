@@ -112,13 +112,13 @@ class TelegramSender(AbstractAsyncSender):
 class MailSender(AbstractAsyncSender):
     def __init__(self, smtp: SMTP,
                  sender: str,
-                 subject: str,
                  receivers: list[str],
+                 subject: str = None,
                  settings: dict = None,
                  **kwargs):
         self.smtp = smtp
         self.sender = sender
-        self.subject = subject
+        self.subject = subject or 'Critical Bot Message'
         self.settings = settings
         super().__init__(receivers, **kwargs)
 
@@ -138,13 +138,15 @@ class MailSender(AbstractAsyncSender):
         if 'Subject: ' not in message:
             headers += f'Subject: {self.subject}\n'
         message_to_send = headers + message
-        logger.debug(message_to_send)
         if not current_smtp.is_connected:
             await current_smtp.connect()
         try:
             await self.smtp.sendmail(self.sender, receiver, message_to_send)
         except SMTPResponseException as e:
             logger.error(str(e))
+        finally:
+            if self.settings:
+                current_smtp.close()
 
     @classmethod
     def smtp_from_dict(cls, settings: dict):
@@ -163,10 +165,10 @@ class MailSender(AbstractAsyncSender):
         sender: str = settings.pop('sender')
         subject: str = settings.pop('subject', 'Critical Bot Message')
         receivers: list = settings.pop('receivers')
-        return MailSender(smtp, sender, subject, receivers, settings)
+        return cls(smtp, sender, receivers, subject, settings)
 
 
-class TerminalSender(AbstractAsyncSender):
+class TerminalSender(AbstractAsyncSender):  # pragma: no cover
     prefix: str = 'vty_'
 
     async def send_one(self, message: str, receiver: Any):
