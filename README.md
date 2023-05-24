@@ -66,16 +66,16 @@ critical-bot --bot-token 1234567890:AAAAAbbbbbCddEEff0GhhIIII0J-K0llllM --redis-
  - `host`: str 
  - `short_message`: str
  - `level`: int
- - `full_message`: str: message plus timestamp
- - `_level`: int: same as level
+ - `full_message`: str: time plus `short_message`
+ - `_level`: int: same as `level`
  - `_gl2_remote_ip`: str
  - `_gl2_remote_port`: int
  - `_gl2_message_id`: str: unique message ID
  - `_kafka_topic`: str: custom field
- - `_source`: str: same as host
- - `_message`: str: same as short_message
+ - `_source`: str: same as `host`
+ - `_message`: str: same as `short_message`
  - `_gl2_source_input`: str: unique input ID
- - `_full_message`: str: same as full_message
+ - `_full_message`: str: same as `full_message`
  - `_facility_num`: int
  - `_forwarder`: str: output type, we will se org.graylog2.outputs.GelfOutput here
  - `_gl2_source_node`: str: node ID in UUID format
